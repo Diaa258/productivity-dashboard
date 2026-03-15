@@ -17,8 +17,10 @@ import NotificationBell from '@/components/notifications/NotificationBell';
 export default function Dashboard() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     const timer = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
@@ -52,7 +54,7 @@ export default function Dashboard() {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <Clock className="w-4 h-4" />
-              {currentTime.toLocaleTimeString()}
+              {isClient ? currentTime.toLocaleTimeString() : ''}
             </div>
             <Button
               variant="outline"
