@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model TimeEntry {
+  id          String    @id @default(cuid())
+  category    String
+  description String
+  startTime   DateTime
+  endTime     DateTime?
+  duration    Int?
+  notes       String?
+  date        DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("time_entries")
+}
+
+model Settings {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
+
+model JiraTicket {
+  id          String   @id
+  summary     String
+  status      String
+  priority    String?
+  storyPoints Int?
+  assignee    String?
+  lastUpdated DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("jira_tickets")
+}
+
+model JenkinsReport {
+  id          String   @id @default(cuid())
+  buildNumber Int
+  subGroup    String
+  feature     String
+  scenario    String
+  status      String
+  testCaseId  String?
+  createdAt   DateTime @default(now())
+
+  @@map("jenkins_reports")
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  type        String   // 'break_reminder', 'deadline_alert', 'daily_summary', 'weekly_goal', 'jenkins_failure', 'jira_assignment'
+  title       String
+  message     String
+  isRead      Boolean  @default(false)
+  scheduledAt DateTime?
+  sentAt      DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("notifications")
+}
+
+model Reminder {
+  id          String   @id @default(cuid())
+  type        String   // 'break', 'task_deadline', 'daily_summary', 'weekly_goal'
+  title       String
+  message     String
+  frequency   String?  // 'daily', 'weekly', 'monthly', 'once'
+  scheduledTime String? // HH:MM format for time-based reminders
+  isActive    Boolean  @default(true)
+  lastTriggered DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("reminders")
+}
+
+model WeeklyGoal {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  targetValue Float?
+  currentValue Float   @default(0)
+  unit        String?  // e.g., 'hours', 'tasks', 'points'
+  weekStart   DateTime
+  weekEnd     DateTime
+  isCompleted Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("weekly_goals")
+}

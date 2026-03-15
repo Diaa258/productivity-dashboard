@@ -1,0 +1,14 @@
+# Jira Configuration
+JIRA_USERNAME=v-diaaeldin.saved
+JIRA_PASSWORD=Yousef@01141739623
+JIRA_BASE_URL=https://jira.emaratech.ae
+
+# Jenkins Configuration
+JENKINS_BASE_URL=https://noqodi-jenkins.emaratech.ae
+JENKINS_JOB_PATH=job/Payment%20Domain%20Automation%20Job/job/pretest
+
+# Database
+DATABASE_URL="file:./dev.db"
+
+# Application
+NEXT_PUBLIC_APP_URL=http://localhost:3000
