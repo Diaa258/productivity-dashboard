@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Bell, BellRing } from 'lucide-react';
+import { clientNotificationService } from '@/services/clientNotificationService';
+import { backgroundNotificationService } from '@/services/backgroundNotificationService';
 import NotificationPanel from './NotificationPanel';
 
 export default function NotificationBell() {
@@ -11,8 +13,11 @@ export default function NotificationBell() {
   useEffect(() => {
     fetchUnreadCount();
     
+    // Request notification permission on first load
+    clientNotificationService.requestPermission();
+    
     // Set up periodic polling for new notifications
-    const interval = setInterval(fetchUnreadCount, 30000); // Check every 30 seconds
+    const interval = setInterval(fetchUnreadCount, 5000); // Check every 5 seconds for testing
     
     return () => clearInterval(interval);
   }, []);
@@ -22,7 +27,19 @@ export default function NotificationBell() {
       const response = await fetch('/api/notifications?unreadOnly=true');
       if (response.ok) {
         const notifications = await response.json();
-        setUnreadCount(notifications.length);
+        const newCount = notifications.length;
+        
+        // Show desktop notification for new notifications
+        if (newCount > unreadCount && notifications.length > 0) {
+          const latestNotification = notifications[0];
+          clientNotificationService.showNotification(
+            latestNotification.title,
+            latestNotification.message
+          );
+        }
+        
+        setUnreadCount(newCount);
+        console.log('NotificationBell: Fetched notifications:', newCount, 'unread');
       }
     } catch (error) {
       console.error('Error fetching unread count:', error);
@@ -40,7 +57,7 @@ export default function NotificationBell() {
     <div className="relative">
       <button
         onClick={togglePanel}
-        className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+        className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors border border-gray-300"
         aria-label="Notifications"
       >
         {unreadCount > 0 ? (

@@ -3,6 +3,29 @@ import { config } from '@/config/env';
 import { JenkinsTestCase } from '@/types';
 import { parseJenkinsReport, exportToCSV } from '@/utils/jenkinsParser';
 
+/**
+ * خدمة جينكينز - JenkinsService
+ * 
+ * هذه الكلاس مسؤولة عن التعامل مع نظام Jenkins لإدارة البيلدات والتقارير الأوتوماتيكية
+ * 
+ * الوظائف الرئيسية:
+ * - جلب تقارير الاختبار الأوتوماتيكي من Jenkins builds
+ * - الحصول على قائمة بالبنود الأخيرة (recent builds)
+ * - تصفية حالات الاختبار بناءً على الحالة والمجموعة والميزة
+ * - تصدير البيانات إلى صيغة CSV
+ * - استخراج القيم الفريدة للتصفية (subgroups, features, statuses)
+ * 
+ * التقنيات المستخدمة:
+ * - Axios للتعامل مع Jenkins REST API
+ * - JSON parsing لتحليل تقارير الاختبار
+ * - CSV export لتصدير البيانات
+ * 
+ * الملاحظات:
+ * - يدعم التعامل مع Payment Domain Automation Reports
+ * - يتضمن أدوات تصفية متقدمة لحالات الاختبار
+ * - يدعم استخراج بيانات من suites.json
+ * - يوفر واجهة سهلة للبحث والتصفية
+ */
 export class JenkinsService {
   private baseUrl: string;
   private jobPath: string;

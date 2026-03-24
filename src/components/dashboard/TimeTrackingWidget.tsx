@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Clock, Play, Pause, Square, Plus, Timer } from 'lucide-react';
-import { TimeEntry, TimeCategory } from '@/types';
+import { TimeEntry, TimeCategory, MeetingType } from '@/types';
 import { formatDuration, formatTime } from '@/utils/dateUtils';
 
 export default function TimeTrackingWidget() {
@@ -14,6 +14,14 @@ export default function TimeTrackingWidget() {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState<TimeCategory>('scripting');
   const [description, setDescription] = useState('');
+  const [selectedMeetingType, setSelectedMeetingType] = useState('');
+  const [meetingTypes, setMeetingTypes] = useState<MeetingType[]>([
+    { id: 'stand-up', name: 'Stand Up', enabled: true },
+    { id: 'internal-stand-up', name: 'Internal Stand Up', enabled: true },
+    { id: 'grooming', name: 'Grooming', enabled: true },
+    { id: 'planning', name: 'Planning', enabled: true },
+    { id: 'other', name: 'Other', enabled: true },
+  ]);
   const [todayEntries, setTodayEntries] = useState<TimeEntry[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -39,7 +47,22 @@ export default function TimeTrackingWidget() {
   useEffect(() => {
     fetchActiveTimer();
     fetchTodayEntries();
+    loadMeetingTypes();
   }, []);
+
+  const loadMeetingTypes = async () => {
+    try {
+      const response = await fetch('/api/settings?type=meeting-types');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data) {
+          setMeetingTypes(data.data.types);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading meeting types:', error);
+    }
+  };
 
   const fetchActiveTimer = async () => {
     try {
@@ -79,9 +102,22 @@ export default function TimeTrackingWidget() {
   };
 
   const startTimer = async () => {
-    if (!description.trim()) {
-      alert('Please enter a description');
-      return;
+    let finalDescription = description.trim();
+    
+    if (selectedCategory === 'meetings') {
+      if (!selectedMeetingType) {
+        alert('Please select a meeting type');
+        return;
+      }
+      finalDescription = selectedMeetingType;
+    } else if (selectedCategory === 'break') {
+      // Auto-start break without requiring input
+      finalDescription = 'Break';
+    } else {
+      if (!finalDescription) {
+        alert('Please enter a description');
+        return;
+      }
     }
 
     setLoading(true);
@@ -93,7 +129,7 @@ export default function TimeTrackingWidget() {
         },
         body: JSON.stringify({
           category: selectedCategory,
-          description: description.trim(),
+          description: finalDescription,
           startTime: new Date().toISOString(),
         }),
       });
@@ -106,6 +142,7 @@ export default function TimeTrackingWidget() {
           date: new Date(data.data.date),
         });
         setDescription('');
+        setSelectedMeetingType('');
         fetchTodayEntries();
       }
     } catch (error) {
@@ -113,6 +150,12 @@ export default function TimeTrackingWidget() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCategoryChange = (category: TimeCategory) => {
+    setSelectedCategory(category);
+    setSelectedMeetingType('');
+    setDescription('');
   };
 
   const stopTimer = async () => {
@@ -212,7 +255,7 @@ export default function TimeTrackingWidget() {
                 <div className="space-y-2">
                   <select
                     value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value as TimeCategory)}
+                    onChange={(e) => handleCategoryChange(e.target.value as TimeCategory)}
                     className="w-full px-3 py-2 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-black text-black"
                   >
                     {categories.map(category => (
@@ -221,15 +264,38 @@ export default function TimeTrackingWidget() {
                       </option>
                     ))}
                   </select>
-                  <Input
-                    placeholder="What are you working on?"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && startTimer()}
-                  />
+                  {selectedCategory === 'meetings' ? (
+                    <select
+                      value={selectedMeetingType}
+                      onChange={(e) => setSelectedMeetingType(e.target.value)}
+                      className="w-full px-3 py-2 border border-black rounded-md focus:outline-none focus:ring-2 focus:ring-black text-black"
+                    >
+                      <option value="">Select meeting type...</option>
+                      {meetingTypes.filter(mt => mt.enabled).map(meetingType => (
+                        <option key={meetingType.id} value={meetingType.name}>
+                          {meetingType.name}
+                        </option>
+                      ))}
+                    </select>
+                  ) : selectedCategory === 'break' ? (
+                    <div className="w-full px-3 py-2 border border-black rounded-md bg-gray-100 text-gray-600">
+                      Break timer - no description needed
+                    </div>
+                  ) : (
+                    <Input
+                      placeholder="What are you working on?"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && startTimer()}
+                    />
+                  )}
                   <Button
                     onClick={startTimer}
-                    disabled={loading || !description.trim()}
+                    disabled={loading || (
+                      selectedCategory === 'meetings' ? !selectedMeetingType.trim() : 
+                      selectedCategory === 'break' ? false : 
+                      !description.trim()
+                    )}
                     className="w-full flex items-center gap-2 bg-red-600 text-white hover:bg-red-700"
                   >
                     <Play className="w-4 h-4" />

@@ -53,6 +53,35 @@ export async function GET(request: NextRequest) {
       }
     }
     
+    if (type === 'meeting-types') {
+      try {
+        const defaultMeetingTypes = [
+          { id: 'stand-up', name: 'Stand Up', enabled: true },
+          { id: 'internal-stand-up', name: 'Internal Stand Up', enabled: true },
+          { id: 'grooming', name: 'Grooming', enabled: true },
+          { id: 'planning', name: 'Planning', enabled: true },
+          { id: 'other', name: 'Other', enabled: true },
+        ];
+        
+        const settings = await settingsRepository.getAllSettings();
+        const savedMeetingTypes = settings.meeting_types;
+        
+        if (savedMeetingTypes) {
+          try {
+            const parsed = JSON.parse(savedMeetingTypes);
+            return NextResponse.json({ success: true, data: { types: parsed } });
+          } catch (parseError) {
+            console.error('Error parsing meeting types:', parseError);
+          }
+        }
+        
+        return NextResponse.json({ success: true, data: { types: defaultMeetingTypes } });
+      } catch (error) {
+        console.error('Error fetching meeting types:', error);
+        return NextResponse.json({ success: false, error: 'Failed to fetch meeting types' }, { status: 500 });
+      }
+    }
+    
     return NextResponse.json({ success: false, error: 'Invalid type' }, { status: 400 });
   } catch (error) {
     console.error('Error in settings API:', error);
@@ -70,7 +99,7 @@ export async function POST(request: NextRequest) {
     
     if (type === 'standard-hours') {
       try {
-        // Save each day's hours to the database
+        // Save each day's hours to database
         const dayKeys = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
         
         for (const day of dayKeys) {
@@ -85,6 +114,23 @@ export async function POST(request: NextRequest) {
         console.error('Error saving standard hours:', error);
         return NextResponse.json(
           { success: false, error: 'Failed to save standard hours' },
+          { status: 500 }
+        );
+      }
+    }
+    
+    if (type === 'meeting-types') {
+      try {
+        if (settings.types && Array.isArray(settings.types)) {
+          await settingsRepository.setSetting('meeting_types', JSON.stringify(settings.types));
+          return NextResponse.json({ success: true, message: 'Meeting types saved successfully' });
+        } else {
+          return NextResponse.json({ success: false, error: 'Invalid meeting types format' }, { status: 400 });
+        }
+      } catch (error) {
+        console.error('Error saving meeting types:', error);
+        return NextResponse.json(
+          { success: false, error: 'Failed to save meeting types' },
           { status: 500 }
         );
       }

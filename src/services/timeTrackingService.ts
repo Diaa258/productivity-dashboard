@@ -4,6 +4,29 @@ import { calculateDailySummary, calculateWeeklyReport, getCurrentWeekRange } fro
 import { startOfDay, endOfDay, isToday } from 'date-fns';
 import { settingsRepository } from '@/repositories/settingsRepository';
 
+/**
+ * خدمة تتبع الوقت - TimeTrackingService
+ * 
+ * هذه الكلاس مسؤولة عن إدارة وتتبع الوقت المنفق على المهام والأنشطة المختلفة
+ * 
+ * الوظائف الرئيسية:
+ * - إنشاء وتحديث وحذف سجلات الوقت (time entries)
+ * - تتبع المؤقت النشط (active timer)
+ * - حساب ملخصات اليوم والأسبوع
+ * - إدارة فئات الوقت (meetings, calls, scripting, etc.)
+ * - دعم الساعات القياسية المخصصة لكل يوم
+ * 
+ * التقنيات المستخدمة:
+ * - Prisma ORM للتعامل مع قاعدة البيانات
+ * - date-fns للتعامل مع التواريخ والأوقات
+ * - حسابات ذكية للملخصات اليومية والأسبوعية
+ * 
+ * الملاحظات:
+ * - يدعم تتبع الوقت لفئات متعددة
+ * - يتضمن حسابات الساعات القياسية القابلة للتخصيص
+ * - يدعم المؤقت النشط مع حساب المدة تلقائياً
+ * - يوفر تقارير شاملة عن الإنتاجية
+ */
 export class TimeTrackingService {
   async createTimeEntry(data: {
     category: TimeCategory;

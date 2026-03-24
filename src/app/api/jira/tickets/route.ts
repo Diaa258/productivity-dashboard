@@ -23,11 +23,16 @@ export async function GET(request: NextRequest) {
     const credentials = Buffer.from(base64Credentials, 'base64').toString('ascii');
     const [username, password] = credentials.split(':');
     
+    // Get baseUrl from request header or use default
+    const baseUrlHeader = request.headers.get('x-jira-base-url');
+    const baseUrl = baseUrlHeader || 'https://jira.emaratech.ae';
+    
     // Create JiraService with credentials from request
-    const jiraService = new JiraService({
+    const jiraService = new JiraService();
+    jiraService.updateSettings({
       username,
       password,
-      baseUrl: 'https://jira.emaratech.ae'
+      baseUrl
     });
     
     const tickets = await jiraService.getAssignedTickets(jql || undefined);

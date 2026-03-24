@@ -2,19 +2,39 @@ import axios from 'axios';
 import { config } from '@/config/env';
 import { JiraTicket } from '@/types';
 
+/**
+ * خدمة جيرا - JiraService
+ * 
+ * هذه الكلاس مسؤولة عن التعامل مع نظام Jira لإدارة المهام والتذاكر
+ * 
+ * الوظائف الرئيسية:
+ * - جلب التذاكر المسندة للمستخدم من Jira
+ * - الحصول على تفاصيل التذكرة الواحدة
+ * - إضافة تعليقات على التذاكر
+ * - تسجيل ساعات العمل على التذاكر
+ * - جلب حالات الاختبار الأوتوماتيكية
+ * - دعم مصادقة Basic Auth مع API v2 و v3
+ * 
+ * التقنيات المستخدمة:
+ * - Axios للتعامل مع HTTP requests
+ * - Base64 encoding للمصادقة
+ * - JQL (Jira Query Language) للبحث والتصفية
+ * 
+ * الملاحظات:
+ * - يدعم التعامل مع مشاريع متعددة
+ * - يتضمن معالجة أخطاء شاملة
+ * - يدعم ال paging لجلب كميات كبيرة من البيانات
+ */
 export class JiraService {
   private baseUrl: string;
   private auth: {
     username: string;
     password: string;
-  };
+  } | null = null;
 
-  constructor(settings?: { username: string; password: string; baseUrl: string }) {
-    this.baseUrl = settings?.baseUrl || config.jira.baseUrl;
-    this.auth = {
-      username: settings?.username || config.jira.email,
-      password: settings?.password || config.jira.token,
-    };
+  constructor() {
+    this.baseUrl = '';
+    this.auth = null;
   }
 
   updateSettings(settings: { username: string; password: string; baseUrl: string }) {
@@ -26,6 +46,9 @@ export class JiraService {
   }
 
   private getAuthHeader() {
+    if (!this.auth) {
+      throw new Error('Jira credentials not set. Please login first.');
+    }
     return {
       Authorization: `Basic ${Buffer.from(`${this.auth.username}:${this.auth.password}`).toString('base64')}`,
     };
@@ -33,6 +56,10 @@ export class JiraService {
 
   async getAssignedTickets(jql?: string): Promise<JiraTicket[]> {
     try {
+      if (!this.auth || !this.baseUrl) {
+        throw new Error('Jira credentials not set. Please login first.');
+      }
+      
       console.log('=== JIRA SERVICE START ===');
       const defaultJQL = 'assignee = currentUser() AND project = TNOQPAY ORDER BY created DESC';
       const searchJQL = jql || defaultJQL;
@@ -138,6 +165,10 @@ export class JiraService {
 
   async getTicketDetails(ticketId: string): Promise<JiraTicket | null> {
     try {
+      if (!this.auth || !this.baseUrl) {
+        throw new Error('Jira credentials not set. Please login first.');
+      }
+      
       const response = await axios.get(
         `${this.baseUrl}/rest/api/3/issue/${ticketId}`,
         {
@@ -170,6 +201,10 @@ export class JiraService {
 
   async addComment(ticketId: string, comment: string): Promise<boolean> {
     try {
+      if (!this.auth || !this.baseUrl) {
+        throw new Error('Jira credentials not set. Please login first.');
+      }
+      
       await axios.post(
         `${this.baseUrl}/rest/api/3/issue/${ticketId}/comment`,
         {
@@ -217,6 +252,10 @@ export class JiraService {
 
   async logWork(ticketId: string, timeSpent: string, comment?: string): Promise<boolean> {
     try {
+      if (!this.auth || !this.baseUrl) {
+        throw new Error('Jira credentials not set. Please login first.');
+      }
+      
       await axios.post(
         `${this.baseUrl}/rest/api/3/issue/${ticketId}/worklog`,
         {

@@ -4,20 +4,23 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Clock, RefreshCw, Settings, TrendingUp, Users, Activity, Bell } from 'lucide-react';
+import { Clock, RefreshCw, Settings, TrendingUp, Users, Activity, Bell, LogOut, Trash2 } from 'lucide-react';
 import JiraTasksWidget from './JiraTasksWidget';
 import JenkinsReportWidget from './JenkinsReportWidget';
+import OutlookEmailWidget from './OutlookEmailWidget';
 import TimeTrackingWidget from './TimeTrackingWidget';
 import DailySummaryWidget from './DailySummaryWidget';
 import WeeklyAnalyticsWidget from './WeeklyAnalyticsWidget';
 import QuickStatsWidget from './QuickStatsWidget';
 import SettingsPopup from './SettingsPopup';
 import NotificationBell from '@/components/notifications/NotificationBell';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Dashboard() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const { logout, credentials } = useAuth();
 
   useEffect(() => {
     setIsClient(true);
@@ -50,6 +53,11 @@ export default function Dashboard() {
                 day: 'numeric'
               })}
             </p>
+            {credentials && (
+              <p className="text-sm text-gray-500 mt-1">
+                المستخدم: {credentials.username}
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -65,19 +73,20 @@ export default function Dashboard() {
               <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
               Refresh All
             </Button>
-            <Button
-              variant="outline"
-              onClick={() => window.location.href = '/settings/notifications'}
-              className="flex items-center gap-2"
-            >
-              <Bell className="w-4 h-4" />
-              Notifications
-            </Button>
+            <NotificationBell />
             <SettingsPopup>
               <Button variant="outline" size="icon">
                 <Settings className="w-4 h-4" />
               </Button>
             </SettingsPopup>
+            <Button
+              variant="outline"
+              onClick={logout}
+              className="text-red-600 hover:text-red-700 hover:border-red-300"
+              title="تسجيل الخروج"
+            >
+              <LogOut className="w-4 h-4" />
+            </Button>
           </div>
         </div>
       </div>
@@ -103,6 +112,9 @@ export default function Dashboard() {
 
         {/* Jenkins Report */}
         <JenkinsReportWidget />
+
+        {/* Outlook Emails */}
+        <OutlookEmailWidget />
 
       </div>
     </div>

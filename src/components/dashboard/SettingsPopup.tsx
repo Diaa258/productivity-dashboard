@@ -11,7 +11,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Settings, Save, TestTube } from 'lucide-react';
+import { Settings, Save, TestTube, Info, Plus, Trash2 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { MeetingType, MeetingTypesSettings } from '@/types';
 
 interface JiraSettings {
   username: string;
@@ -39,6 +41,7 @@ interface SettingsPopupProps {
 }
 
 export default function SettingsPopup({ children }: SettingsPopupProps) {
+  const { credentials } = useAuth();
   const [jiraSettings, setJiraSettings] = useState<JiraSettings>({
     username: '',
     password: '',
@@ -59,6 +62,16 @@ export default function SettingsPopup({ children }: SettingsPopupProps) {
     saturday: 0,
     sunday: 0,
   });
+
+  const [meetingTypes, setMeetingTypes] = useState<MeetingType[]>([
+    { id: 'stand-up', name: 'Stand Up', enabled: true },
+    { id: 'internal-stand-up', name: 'Internal Stand Up', enabled: true },
+    { id: 'grooming', name: 'Grooming', enabled: true },
+    { id: 'planning', name: 'Planning', enabled: true },
+    { id: 'other', name: 'Other', enabled: true },
+  ]);
+  
+  const [newMeetingType, setNewMeetingType] = useState('');
   
   const [loading, setLoading] = useState(false);
   const [testing, setTesting] = useState<'jira' | 'jenkins' | null>(null);
@@ -67,16 +80,18 @@ export default function SettingsPopup({ children }: SettingsPopupProps) {
 
   useEffect(() => {
     loadSettings();
-  }, []);
+  }, [credentials]);
 
   const loadSettings = async () => {
     try {
-      // Load Jira settings from environment or localStorage
-      setJiraSettings({
-        username: process.env.NEXT_PUBLIC_JIRA_USERNAME || 'v-diaaeldin.saved',
-        password: process.env.NEXT_PUBLIC_JIRA_PASSWORD || 'Yousef@01141739623',
-        baseUrl: process.env.NEXT_PUBLIC_JIRA_BASE_URL || 'https://jira.emaratech.ae',
-      });
+      // Load Jira settings from authenticated session
+      if (credentials) {
+        setJiraSettings({
+          username: credentials.username,
+          password: credentials.password,
+          baseUrl: credentials.baseUrl,
+        });
+      }
       
       setJenkinsSettings({
         baseUrl: process.env.NEXT_PUBLIC_JENKINS_BASE_URL || '',
@@ -94,6 +109,20 @@ export default function SettingsPopup({ children }: SettingsPopupProps) {
         }
       } catch (error) {
         console.error('Error loading standard hours:', error);
+        // Keep default values if API fails
+      }
+
+      // Load Meeting Types from API
+      try {
+        const response = await fetch('/api/settings?type=meeting-types');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data) {
+            setMeetingTypes(data.data.types);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading meeting types:', error);
         // Keep default values if API fails
       }
     } catch (error) {
@@ -129,6 +158,28 @@ export default function SettingsPopup({ children }: SettingsPopupProps) {
         setTestResult({ success: false, message: 'Failed to save standard hours' });
         return;
       }
+
+      // Save Meeting Types to API
+      try {
+        const response = await fetch('/api/settings', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            type: 'meeting-types',
+            settings: { types: meetingTypes }
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to save meeting types');
+        }
+      } catch (error) {
+        console.error('Error saving meeting types:', error);
+        setTestResult({ success: false, message: 'Failed to save meeting types' });
+        return;
+      }
       
       setTestResult({ success: true, message: 'Settings saved successfully!' });
       setTimeout(() => setTestResult(null), 3000);
@@ -137,6 +188,28 @@ export default function SettingsPopup({ children }: SettingsPopupProps) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const addMeetingType = () => {
+    if (newMeetingType.trim() && !meetingTypes.find(mt => mt.name.toLowerCase() === newMeetingType.trim().toLowerCase())) {
+      const newType: MeetingType = {
+        id: newMeetingType.trim().toLowerCase().replace(/\s+/g, '-'),
+        name: newMeetingType.trim(),
+        enabled: true
+      };
+      setMeetingTypes([...meetingTypes, newType]);
+      setNewMeetingType('');
+    }
+  };
+
+  const toggleMeetingType = (id: string) => {
+    setMeetingTypes(meetingTypes.map(mt => 
+      mt.id === id ? { ...mt, enabled: !mt.enabled } : mt
+    ));
+  };
+
+  const deleteMeetingType = (id: string) => {
+    setMeetingTypes(meetingTypes.filter(mt => mt.id !== id));
   };
 
   const testJiraConnection = async () => {
@@ -265,64 +338,62 @@ export default function SettingsPopup({ children }: SettingsPopupProps) {
           {/* Jira Settings */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium text-gray-900">إعدادات Jira</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  اسم المستخدم
-                </label>
-                <Input
-                  type="text"
-                  placeholder="your-username"
-                  value={jiraSettings.username}
-                  onChange={(e) => setJiraSettings(prev => ({ ...prev, username: e.target.value }))}
-                  className="w-full text-black"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  كلمة المرور
-                </label>
-                <Input
-                  type="password"
-                  placeholder="Your password"
-                  value={jiraSettings.password}
-                  onChange={(e) => setJiraSettings(prev => ({ ...prev, password: e.target.value }))}
-                  className="w-full text-black"
-                />
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  رابط Jira Base URL
-                </label>
-                <Input
-                  type="url"
-                  placeholder="https://your-domain.atlassian.net"
-                  value={jiraSettings.baseUrl}
-                  onChange={(e) => setJiraSettings(prev => ({ ...prev, baseUrl: e.target.value }))}
-                  className="w-full text-black"
-                />
+            
+            {/* Info Message */}
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
+              <div className="flex items-start gap-2">
+                <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div className="text-sm text-blue-700">
+                  <p className="font-medium mb-1">بيانات الاعتماد مُدارة عبر تسجيل الدخول</p>
+                  <p>يتم حفظ بيانات Jira الخاصة بك بشكل آمن عند تسجيل الدخول وتبقى نشطة لمدة 24 ساعة.</p>
+                  {credentials && (
+                    <p className="mt-2">
+                      <strong>المستخدم الحالي:</strong> {credentials.username}<br/>
+                      <strong>رابط Jira:</strong> {credentials.baseUrl}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={testJiraConnectivity}
-                disabled={testing === 'jira' || !jiraSettings.username || !jiraSettings.password || !jiraSettings.baseUrl}
-                className="flex items-center gap-2"
-              >
-                <TestTube className="w-4 h-4" />
-                {testing === 'jira' ? 'جاري الفحص...' : 'فحص الاتصال'}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={testJiraConnection}
-                disabled={testing === 'jira' || !jiraSettings.username || !jiraSettings.password || !jiraSettings.baseUrl}
-                className="flex items-center gap-2"
-              >
-                <TestTube className="w-4 h-4" />
-                {testing === 'jira' ? 'جاري الاختبار...' : 'اختبار التذاكر'}
-              </Button>
-            </div>
+
+            {/* Read-only display of current settings */}
+            {credentials && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    اسم المستخدم
+                  </label>
+                  <Input
+                    type="text"
+                    value={credentials.username}
+                    disabled
+                    className="w-full text-black bg-gray-50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    رابط Jira Base URL
+                  </label>
+                  <Input
+                    type="url"
+                    value={credentials.baseUrl}
+                    disabled
+                    className="w-full text-black bg-gray-50"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Test Connection Button */}
+            <Button
+              variant="outline"
+              onClick={testJiraConnectivity}
+              disabled={testing === 'jira' || !credentials}
+              className="flex items-center gap-2"
+            >
+              <TestTube className="w-4 h-4" />
+              {testing === 'jira' ? 'جاري الفحص...' : 'فحص الاتصال'}
+            </Button>
           </div>
 
           {/* Jenkins Settings */}
@@ -471,6 +542,61 @@ export default function SettingsPopup({ children }: SettingsPopupProps) {
                   الإجمالي: {Object.values(standardHours).reduce((sum, hours) => sum + hours, 0)} ساعة
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Meeting Types Settings */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-gray-900">أنواع الاجتماعات</h3>
+            
+            <div className="space-y-3">
+              {meetingTypes.map((meetingType) => (
+                <div key={meetingType.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={meetingType.enabled}
+                      onChange={() => toggleMeetingType(meetingType.id)}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className={`font-medium ${meetingType.enabled ? 'text-gray-900' : 'text-gray-400'}`}>
+                      {meetingType.name}
+                    </span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => deleteMeetingType(meetingType.id)}
+                    className="text-red-600 hover:text-red-700 hover:border-red-300"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
+              
+              {meetingTypes.length === 0 && (
+                <div className="text-center py-4 text-gray-500">
+                  لا توجد أنواع اجتماعات مضافة
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <Input
+                placeholder="نوع اجتماع جديد..."
+                value={newMeetingType}
+                onChange={(e) => setNewMeetingType(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && addMeetingType()}
+                className="flex-1 text-black"
+              />
+              <Button
+                onClick={addMeetingType}
+                disabled={!newMeetingType.trim()}
+                className="flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                إضافة
+              </Button>
             </div>
           </div>
 

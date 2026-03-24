@@ -70,3 +70,13 @@ export interface JenkinsSuite {
 export interface JenkinsReportData {
   suites: JenkinsSuite[];
 }
+
+export interface MeetingType {
+  id: string;
+  name: string;
+  enabled: boolean;
+}
+
+export interface MeetingTypesSettings {
+  types: MeetingType[];
+}

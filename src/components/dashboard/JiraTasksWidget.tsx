@@ -7,8 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Users, RefreshCw, Search, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
 import { JiraTicket } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function JiraTasksWidget() {
+  const { credentials } = useAuth();
   const [tickets, setTickets] = useState<JiraTicket[]>([]);
   const [automationTestCases, setAutomationTestCases] = useState<JiraTicket[]>([]);
   const [allTickets, setAllTickets] = useState<JiraTicket[]>([]);
@@ -24,62 +26,22 @@ export default function JiraTasksWidget() {
   const [loadingAllIntegration, setLoadingAllIntegration] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all');
-  const [jiraSettings, setJiraSettings] = useState({
-    username: '',
-    password: '',
-    baseUrl: '',
-  });
   const [activeTab, setActiveTab] = useState<'tasks' | 'automation' | 'all' | 'latest' | 'defects' | 'integration' | 'allintegration'>('tasks');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedProject, setSelectedProject] = useState('TNOQPAY');
   const itemsPerPage = 10;
 
   useEffect(() => {
-    loadJiraSettings();
-  }, []);
-
-  const loadJiraSettings = async () => {
-    try {
-      if (typeof window !== 'undefined') {
-        try {
-          if (navigator.storage && navigator.storage.estimate) {
-            const estimate = await navigator.storage.estimate();
-            console.log('Storage usage:', estimate.usage, 'quota:', estimate.quota);
-            if (estimate.usage && estimate.quota && (estimate.usage / estimate.quota) > 0.9) {
-              console.warn('Storage quota nearly exceeded, clearing cache');
-              localStorage.removeItem('jiraSettings');
-            }
-          }
-        } catch (e) {
-          console.log('Storage estimate not available');
-        }
-      }
-      
-      const savedSettings = localStorage.getItem('jiraSettings');
-      if (savedSettings) {
-        setJiraSettings(JSON.parse(savedSettings));
-      } else {
-        setJiraSettings({
-          username: 'v-diaaeldin.saved',
-          password: 'Yousef@01141739623',
-          baseUrl: 'https://jira.emaratech.ae',
-        });
-      }
-    } catch (error) {
-      console.error('Error loading Jira settings:', error);
-      setJiraSettings({
-        username: 'v-diaaeldin.saved',
-        password: 'Yousef@01141739623',
-        baseUrl: 'https://jira.emaratech.ae',
-      });
+    if (credentials) {
+      fetchTickets();
     }
-  };
+  }, [credentials, selectedProject]);
 
   const fetchTickets = async () => {
     setLoading(true);
     try {
-      if (!jiraSettings.username || !jiraSettings.password || !jiraSettings.baseUrl) {
-        console.log('Jira settings not configured');
+      if (!credentials || !credentials.username || !credentials.password || !credentials.baseUrl) {
+        console.log('Jira credentials not available');
         setLoading(false);
         return;
       }
@@ -94,9 +56,10 @@ export default function JiraTasksWidget() {
       const randomId = Math.random().toString(36).substring(7);
       const response = await fetch(`/api/jira/tickets?jql=assignee = currentUser() AND project = ${selectedProject} AND issuetype = "Task" ORDER BY created DESC&t=${timestamp}&r=${randomId}`, {
         headers: {
-          'Authorization': `Basic ${btoa(`${jiraSettings.username}:${jiraSettings.password}`)}`,
+          'Authorization': `Basic ${btoa(`${credentials.username}:${credentials.password}`)}`,
           'Content-Type': 'application/json',
           'Cache-Control': 'no-cache',
+          'x-jira-base-url': credentials.baseUrl,
         },
       });
       
@@ -149,16 +112,16 @@ export default function JiraTasksWidget() {
   const fetchAllTickets = async () => {
     setLoadingAll(true);
     try {
-      if (!jiraSettings.username || !jiraSettings.password || !jiraSettings.baseUrl) {
-        console.log('Jira settings not configured');
+      if (!credentials || !credentials.username || !credentials.password || !credentials.baseUrl) {
         setLoadingAll(false);
         return;
       }
 
       const response = await fetch(`/api/jira/tickets?jql=(creator = currentUser() OR assignee = currentUser()) AND project = ${selectedProject} ORDER BY created DESC`, {
         headers: {
-          'Authorization': `Basic ${btoa(`${jiraSettings.username}:${jiraSettings.password}`)}`,
+          'Authorization': `Basic ${btoa(`${credentials.username}:${credentials.password}`)}`,
           'Content-Type': 'application/json',
+          'x-jira-base-url': credentials.baseUrl,
         },
       });
       
@@ -178,16 +141,16 @@ export default function JiraTasksWidget() {
   const fetchDefects = async () => {
     setLoadingDefects(true);
     try {
-      if (!jiraSettings.username || !jiraSettings.password || !jiraSettings.baseUrl) {
-        console.log('Jira settings not configured');
+      if (!credentials || !credentials.username || !credentials.password || !credentials.baseUrl) {
         setLoadingDefects(false);
         return;
       }
 
       const response = await fetch(`/api/jira/tickets?jql=creator = currentUser() AND project = ${selectedProject} AND issuetype = "Defect" ORDER BY created DESC`, {
         headers: {
-          'Authorization': `Basic ${btoa(`${jiraSettings.username}:${jiraSettings.password}`)}`,
+          'Authorization': `Basic ${btoa(`${credentials.username}:${credentials.password}`)}`,
           'Content-Type': 'application/json',
+          'x-jira-base-url': credentials.baseUrl,
         },
       });
       
@@ -252,16 +215,16 @@ export default function JiraTasksWidget() {
   const fetchIntegrationTestCases = async () => {
     setLoadingIntegration(true);
     try {
-      if (!jiraSettings.username || !jiraSettings.password || !jiraSettings.baseUrl) {
-        console.log('Jira settings not configured');
+      if (!credentials || !credentials.username || !credentials.password || !credentials.baseUrl) {
         setLoadingIntegration(false);
         return;
       }
 
       const response = await fetch(`/api/jira/tickets?jql=issuetype = "Test Case" AND "Test Type" = Integration AND status in ("Automation Executed", Merged, Closed) AND status not in (Decommissioned) AND Domains = "Payments" AND "Automation Engineer" = currentUser() ORDER BY created DESC`, {
         headers: {
-          'Authorization': `Basic ${btoa(`${jiraSettings.username}:${jiraSettings.password}`)}`,
+          'Authorization': `Basic ${btoa(`${credentials.username}:${credentials.password}`)}`,
           'Content-Type': 'application/json',
+          'x-jira-base-url': credentials.baseUrl,
         },
       });
       
@@ -292,16 +255,16 @@ export default function JiraTasksWidget() {
   const fetchAllIntegrationTestCases = async () => {
     setLoadingAllIntegration(true);
     try {
-      if (!jiraSettings.username || !jiraSettings.password || !jiraSettings.baseUrl) {
-        console.log('Jira settings not configured');
+      if (!credentials || !credentials.username || !credentials.password || !credentials.baseUrl) {
         setLoadingAllIntegration(false);
         return;
       }
 
       const response = await fetch(`/api/jira/tickets?jql=issuetype = "Test Case" AND "Test Type" = Integration AND status not in ("Automation Executed", Merged, Closed) AND status not in (Decommissioned) AND Domains = "Payments" AND "Automation Engineer" = V-Diaaeldin.saved ORDER BY created DESC`, {
         headers: {
-          'Authorization': `Basic ${btoa(`${jiraSettings.username}:${jiraSettings.password}`)}`,
+          'Authorization': `Basic ${btoa(`${credentials.username}:${credentials.password}`)}`,
           'Content-Type': 'application/json',
+          'x-jira-base-url': credentials.baseUrl,
         },
       });
       
@@ -330,11 +293,11 @@ export default function JiraTasksWidget() {
   };
 
   useEffect(() => {
-    loadJiraSettings();
+    fetchTickets();
   }, []);
 
   useEffect(() => {
-    if (jiraSettings.username && jiraSettings.password && jiraSettings.baseUrl) {
+    if (credentials && credentials.username && credentials.password && credentials.baseUrl) {
       console.log('=== MOUNTING JIRA WIDGET ===');
       console.log('Fetching all data with created DESC ordering...');
       fetchTickets();
@@ -344,7 +307,7 @@ export default function JiraTasksWidget() {
       fetchAllIntegrationTestCases();
       fetchDefects();
     }
-  }, [jiraSettings]);
+  }, [credentials]);
 
   const filteredTickets = tickets
     .filter(ticket => {
@@ -636,7 +599,7 @@ export default function JiraTasksWidget() {
                   <TableRow key={ticket.id}>
                     <TableCell className="font-medium">
                       <a
-                        href={`${jiraSettings.baseUrl}/browse/${ticket.id}`}
+                        href={`${credentials?.baseUrl || ''}/browse/${ticket.id}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-1"

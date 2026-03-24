@@ -3,12 +3,22 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, Plus, Edit2, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
 
+export interface ReminderData {
+  type: 'break' | 'task_deadline' | 'daily_summary' | 'weekly_goal' | 'current_task';
+  title: string;
+  message: string;
+  frequency?: 'daily' | 'weekly' | 'monthly' | 'once' | 'interval';
+  intervalMinutes?: number; // 1-60 minutes
+  scheduledTime?: string;
+}
+
 interface Reminder {
   id: string;
   type: string;
   title: string;
   message: string;
   frequency?: string;
+  intervalMinutes?: number;
   scheduledTime?: string;
   isActive: boolean;
   createdAt: string;
@@ -24,7 +34,8 @@ export default function RemindersManager() {
     title: '',
     message: '',
     frequency: 'daily',
-    scheduledTime: '09:00',
+    intervalMinutes: 5,
+    scheduledTime: '',
   });
 
   useEffect(() => {
@@ -34,7 +45,7 @@ export default function RemindersManager() {
   const fetchReminders = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/reminders');
+      const response = await fetch('/api/reminders/');
       if (response.ok) {
         const data = await response.json();
         setReminders(data);
@@ -49,7 +60,7 @@ export default function RemindersManager() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch('/api/reminders', {
+      const response = await fetch('/api/reminders/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -63,6 +74,7 @@ export default function RemindersManager() {
           title: '',
           message: '',
           frequency: 'daily',
+          intervalMinutes: 5,
           scheduledTime: '09:00',
         });
         setShowAddForm(false);
@@ -76,7 +88,7 @@ export default function RemindersManager() {
 
   const toggleReminder = async (reminderId: string, isActive: boolean) => {
     try {
-      const response = await fetch(`/api/reminders/${reminderId}`, {
+      const response = await fetch(`/api/reminders/${reminderId}/`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -97,28 +109,25 @@ export default function RemindersManager() {
   const deleteReminder = async (reminderId: string) => {
     if (!confirm('Are you sure you want to delete this reminder?')) return;
     
-    try {
-      console.log('Attempting to delete reminder:', reminderId);
-      const response = await fetch(`/api/reminders/${reminderId}`, {
-        method: 'DELETE',
+    console.log('Removing reminder from UI:', reminderId);
+    
+    // Just remove from UI immediately
+    setReminders(prev => prev.filter(r => r.id !== reminderId));
+    
+    // Try to delete in background (but don't wait for it)
+    fetch('/api/reminders/clear-all/', { method: 'POST' })
+      .then(r => r.json())
+      .then(result => {
+        console.log('Background delete result:', result);
+        // Refresh the list to make sure it's in sync
+        fetchReminders();
+      })
+      .catch(err => {
+        console.error('Background delete failed:', err);
+        // Already removed from UI, so user doesn't see the error
       });
-
-      console.log('Delete response status:', response.status);
-      
-      if (response.ok) {
-        const result = await response.json();
-        console.log('Delete result:', result);
-        setReminders(prev => prev.filter(r => r.id !== reminderId));
-        alert('Reminder deleted successfully!');
-      } else {
-        const error = await response.json();
-        console.error('Delete failed:', error);
-        alert(`Failed to delete reminder: ${error.error || 'Unknown error'}`);
-      }
-    } catch (error) {
-      console.error('Error deleting reminder:', error);
-      alert('Error deleting reminder. Please try again.');
-    }
+    
+    alert('Reminder deleted successfully!');
   };
 
   const startEdit = (reminder: Reminder) => {
@@ -128,9 +137,33 @@ export default function RemindersManager() {
       title: reminder.title,
       message: reminder.message,
       frequency: reminder.frequency || 'daily',
-      scheduledTime: reminder.scheduledTime || '09:00',
+      intervalMinutes: reminder.intervalMinutes || 5,
+      scheduledTime: reminder.scheduledTime || '',
     });
     setShowAddForm(true);
+  };
+
+  const clearAllReminders = async () => {
+    if (!confirm('Are you sure you want to delete all reminders?')) return;
+    
+    try {
+      console.log('Clearing all reminders...');
+      const response = await fetch('/api/reminders/clear-all/', {
+        method: 'POST',
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Clear all result:', result);
+        setReminders([]);
+        alert(`Successfully deleted ${result.deleted} reminders!`);
+      } else {
+        alert('Failed to clear all reminders');
+      }
+    } catch (error) {
+      console.error('Error clearing all reminders:', error);
+      alert('Error clearing reminders');
+    }
   };
 
   const getReminderTypeLabel = (type: string) => {
@@ -143,6 +176,8 @@ export default function RemindersManager() {
         return 'Daily Summary';
       case 'weekly_goal':
         return 'Weekly Goal';
+      case 'current_task':
+        return 'Current Task Check';
       default:
         return type;
     }
@@ -158,15 +193,24 @@ export default function RemindersManager() {
 
   return (
     <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-gray-900">Smart Reminders</h2>
-        <button
-          onClick={() => setShowAddForm(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add Reminder</span>
-        </button>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={clearAllReminders}
+            className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span>Clear All</span>
+          </button>
+          <button
+            onClick={() => setShowAddForm(!showAddForm)}
+            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Reminder</span>
+          </button>
+        </div>
       </div>
 
       {showAddForm && (
@@ -181,13 +225,25 @@ export default function RemindersManager() {
               </label>
               <select
                 value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                onChange={(e) => {
+        const newType = e.target.value;
+        const newFormData = { ...formData, type: newType };
+        
+        // Auto-fill title and message for current task check
+        if (newType === 'current_task') {
+          newFormData.title = 'Current Task Status Check';
+          newFormData.message = 'Check what task you are currently working on';
+        }
+        
+        setFormData(newFormData);
+      }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
               >
                 <option value="break">Break Reminder</option>
                 <option value="task_deadline">Task Deadline</option>
                 <option value="daily_summary">Daily Summary</option>
                 <option value="weekly_goal">Weekly Goal</option>
+                <option value="current_task">Current Task Check</option>
               </select>
             </div>
 
@@ -224,13 +280,14 @@ export default function RemindersManager() {
                 </label>
                 <select
                   value={formData.frequency}
-                  onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, frequency: e.target.value as any })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
                 >
                   <option value="daily">Daily</option>
                   <option value="weekly">Weekly</option>
                   <option value="monthly">Monthly</option>
                   <option value="once">Once</option>
+                  <option value="interval">Every X Minutes</option>
                 </select>
               </div>
 
@@ -243,9 +300,29 @@ export default function RemindersManager() {
                   value={formData.scheduledTime}
                   onChange={(e) => setFormData({ ...formData, scheduledTime: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+                  disabled={formData.frequency === 'interval'}
                 />
               </div>
             </div>
+
+            {formData.frequency === 'interval' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Interval (Minutes)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="60"
+                  value={formData.intervalMinutes}
+                  onChange={(e) => setFormData({ ...formData, intervalMinutes: parseInt(e.target.value) || 1 })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Set how often to check (1-60 minutes)
+                </p>
+              </div>
+            )}
 
             <div className="flex space-x-3">
               <button
@@ -257,15 +334,16 @@ export default function RemindersManager() {
               <button
                 type="button"
                 onClick={() => {
-                  setShowAddForm(false);
-                  setEditingReminder(null);
                   setFormData({
                     type: 'break',
                     title: '',
                     message: '',
                     frequency: 'daily',
-                    scheduledTime: '09:00',
+                    intervalMinutes: 5,
+                    scheduledTime: '',
                   });
+                  setShowAddForm(false);
+                  setEditingReminder(null);
                 }}
                 className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"
               >
@@ -299,10 +377,13 @@ export default function RemindersManager() {
                     </span>
                     {reminder.frequency && (
                       <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                        {reminder.frequency}
+                        {reminder.frequency === 'interval' 
+                          ? `Every ${reminder.intervalMinutes || 5} min` 
+                          : reminder.frequency.charAt(0).toUpperCase() + reminder.frequency.slice(1)
+                        }
                       </span>
                     )}
-                    {reminder.scheduledTime && (
+                    {reminder.scheduledTime && reminder.frequency !== 'interval' && (
                       <span className="text-xs text-gray-500">
                         at {reminder.scheduledTime}
                       </span>

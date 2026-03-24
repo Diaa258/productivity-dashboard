@@ -75,10 +75,11 @@ model Notification {
 
 model Reminder {
   id          String   @id @default(cuid())
-  type        String   // 'break', 'task_deadline', 'daily_summary', 'weekly_goal'
+  type        String   // 'break', 'task_deadline', 'daily_summary', 'weekly_goal', 'current_task'
   title       String
   message     String
-  frequency   String?  // 'daily', 'weekly', 'monthly', 'once'
+  frequency   String?  // 'daily', 'weekly', 'monthly', 'once', 'interval'
+  intervalMinutes Int?  // Custom interval in minutes (1-60)
   scheduledTime String? // HH:MM format for time-based reminders
   isActive    Boolean  @default(true)
   lastTriggered DateTime?

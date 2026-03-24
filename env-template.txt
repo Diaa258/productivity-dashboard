@@ -7,6 +7,12 @@ JIRA_BASE_URL=https://jira.emaratech.ae
 JENKINS_BASE_URL=https://noqodi-jenkins.emaratech.ae
 JENKINS_JOB_PATH=job/Payment%20Domain%20Automation%20Job/job/pretest
 
+# Outlook/Microsoft Graph Configuration
+OUTLOOK_CLIENT_ID=your-outlook-client-id
+OUTLOOK_CLIENT_SECRET=your-outlook-client-secret
+OUTLOOK_TENANT_ID=your-outlook-tenant-id
+OUTLOOK_REDIRECT_URI=http://localhost:3000/api/outlook/callback
+
 # Database
 DATABASE_URL="file:./dev.db"
 

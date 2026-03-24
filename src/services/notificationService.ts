@@ -4,17 +4,18 @@ import { jenkinsService } from './jenkinsService';
 import { timeTrackingService } from './timeTrackingService';
 
 export interface NotificationData {
-  type: 'break_reminder' | 'deadline_alert' | 'daily_summary' | 'weekly_goal' | 'jenkins_failure' | 'jira_assignment';
+  type: 'break_reminder' | 'deadline_alert' | 'daily_summary' | 'weekly_goal' | 'jenkins_failure' | 'jira_assignment' | 'current_task';
   title: string;
   message: string;
   scheduledAt?: Date;
 }
 
 export interface ReminderData {
-  type: 'break' | 'task_deadline' | 'daily_summary' | 'weekly_goal';
+  type: 'break' | 'task_deadline' | 'daily_summary' | 'weekly_goal' | 'current_task';
   title: string;
   message: string;
-  frequency?: 'daily' | 'weekly' | 'monthly' | 'once';
+  frequency?: 'daily' | 'weekly' | 'monthly' | 'once' | 'interval';
+  intervalMinutes?: number;
   scheduledTime?: string; // HH:MM format
 }
 
@@ -27,6 +28,37 @@ export interface WeeklyGoalData {
   weekEnd: Date;
 }
 
+/**
+ * خدمة الإشعارات والتذكيرات - NotificationService
+ * 
+ * هذه الكلاس مسؤولة عن إدارة جميع الإشعارات والتذكيرات والمهام المجدولة في النظام
+ * 
+ * الوظائف الرئيسية:
+ * - إدارة الإشعارات (إنشاء، قراءة، تحديث، حذف)
+ * - إدارة التذكيرات المجدولة (يومية، أسبوعية، شهرية)
+ * - إدارة الأهداف الأسبوعية وتتبع التقدم
+ * - إرسال تنبيهات ذكية (أوقات الراحة، مواعيد المهام)
+ * - التكامل مع Jira و Jenkins و Time Tracking
+ * - معالجة المهام المجدولة تلقائياً
+ * 
+ * أنواع الإشعارات المدعومة:
+ * - تذكيرات الراحة (break reminders)
+ * - تنبيهات مواعيد المهام (deadline alerts)
+ * - الملخصات اليومية (daily summaries)
+ * - تقدم الأهداف الأسبوعية (weekly goals)
+ * - فشل البيلدات في Jenkins (jenkins failures)
+ * - تكليفات Jira الجديدة (jira assignments)
+ * 
+ * التقنيات المستخدمة:
+ * - Prisma ORM للتخزين الدائم
+ * - تكامل مع الخدمات الأخرى
+ * - معالجة مجدولة تلقائية
+ * 
+ * الملاحظات:
+ * - يدعم التذكيرات الذكية القائمة على الوقت
+ * - يتكامل مع أنظمة خارجية (Jira, Jenkins)
+ * - يوفر تتبعاً شاملاً للأهداف والتقدم
+ */
 export class NotificationService {
   async createNotification(data: NotificationData): Promise<any> {
     try {
@@ -58,6 +90,32 @@ export class NotificationService {
     }
   }
 
+  async deleteNotification(notificationId: string): Promise<void> {
+    try {
+      console.log('Attempting to delete notification:', notificationId);
+      
+      // First check if notification exists
+      const notification = await prisma.notification.findUnique({
+        where: { id: notificationId },
+      });
+      
+      if (!notification) {
+        console.log('Notification not found:', notificationId);
+        throw new Error('Notification not found');
+      }
+      
+      console.log('Found notification, deleting...');
+      await prisma.notification.delete({
+        where: { id: notificationId },
+      });
+      
+      console.log('Notification deleted successfully');
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+      throw error;
+    }
+  }
+
   async markAsRead(notificationId: string): Promise<void> {
     try {
       await prisma.notification.update({
@@ -86,9 +144,14 @@ export class NotificationService {
     try {
       const reminder = await prisma.reminder.create({
         data: {
-          ...data,
+          type: data.type,
+          title: data.title,
+          message: data.message,
+          frequency: data.frequency,
+          intervalMinutes: data.intervalMinutes,
+          scheduledTime: data.scheduledTime,
           isActive: true,
-        },
+        } as any,
       });
       return reminder;
     } catch (error) {
@@ -194,13 +257,22 @@ export class NotificationService {
 
   async updateGoalProgress(goalId: string, currentValue: number): Promise<any> {
     try {
+      // First get the goal to check its target value
+      const existingGoal = await prisma.weeklyGoal.findUnique({
+        where: { id: goalId },
+      });
+      
+      if (!existingGoal) {
+        throw new Error('Goal not found');
+      }
+
+      const isCompleted = existingGoal.targetValue ? currentValue >= existingGoal.targetValue : false;
+
       const goal = await prisma.weeklyGoal.update({
         where: { id: goalId },
         data: {
           currentValue,
-          isCompleted: (goal: any) => {
-            return goal.targetValue ? currentValue >= goal.targetValue : false;
-          },
+          isCompleted,
         },
       });
       return goal;
@@ -218,6 +290,101 @@ export class NotificationService {
     } catch (error) {
       console.error('Error deleting weekly goal:', error);
       throw error;
+    }
+  }
+
+  // Desktop Notifications
+  async showDesktopNotification(title: string, message: string): Promise<void> {
+    try {
+      // Check if running in browser environment
+      if (typeof window === 'undefined') {
+        console.log('Desktop notifications not available in server environment');
+        return;
+      }
+
+      // Check if browser supports notifications
+      if (!('Notification' in window)) {
+        console.log('This browser does not support desktop notifications');
+        return;
+      }
+
+      // Request permission if not granted
+      if (Notification.permission === 'default') {
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+          console.log('Notification permission denied');
+          return;
+        }
+      }
+
+      // Show desktop notification
+      if (Notification.permission === 'granted') {
+        const notification = new Notification(title, {
+          body: message,
+          icon: '/favicon.ico',
+          badge: '/favicon.ico',
+          tag: 'productivity-dashboard',
+          requireInteraction: false,
+        });
+
+        // Auto-close after 5 seconds
+        setTimeout(() => {
+          notification.close();
+        }, 5000);
+
+        // Click handler to open dashboard
+        notification.onclick = () => {
+          if (typeof window !== 'undefined') {
+            window.focus();
+          }
+          notification.close();
+        };
+      }
+    } catch (error) {
+      console.error('Error showing desktop notification:', error);
+    }
+  }
+  async checkCurrentTasks(): Promise<void> {
+    try {
+      // Get today's time entries to find current task
+      const todayEntries = await timeTrackingService.getTodayTimeEntries();
+      const activeEntry = todayEntries.find(entry => !entry.endTime); // Task without end time is active
+      
+      if (activeEntry) {
+        // Get active Jira tasks
+        const tickets = await jiraService.getAssignedTickets();
+        const activeTasks = tickets.filter(ticket => 
+          !['Done', 'Closed', 'Resolved'].includes(ticket.status)
+        );
+        
+        const notificationTitle = '⏰ Current Task Reminder';
+        const notificationMessage = `You're currently working on: "${activeEntry.description}" (${activeEntry.category}). Active tasks: ${activeTasks.length}`;
+        
+        // Create in-app notification
+        await this.createNotification({
+          type: 'current_task',
+          title: notificationTitle,
+          message: notificationMessage,
+        });
+
+        // Show desktop notification
+        await this.showDesktopNotification(notificationTitle, notificationMessage);
+      } else {
+        const notificationTitle = '⏰ Task Status Check';
+        const notificationMessage = 'No active task found. Consider starting a new task to track your productivity!';
+        
+        // Create in-app notification
+        await this.createNotification({
+          type: 'current_task',
+          title: notificationTitle,
+          message: notificationMessage,
+        });
+
+        // Show desktop notification
+        await this.showDesktopNotification(notificationTitle, notificationMessage);
+      }
+    } catch (error) {
+      console.error('Error checking current tasks:', error);
     }
   }
 
@@ -370,6 +537,60 @@ export class NotificationService {
           
           if (timeDiff < 60000 && now.getTime() - lastTriggered.getTime() > 23 * 60 * 60 * 1000) {
             await this.sendBreakReminder();
+            await prisma.reminder.update({
+              where: { id: reminder.id },
+              data: { lastTriggered: new Date() },
+            });
+          }
+        }
+      }
+
+      // Check current task reminders with interval frequency
+      const currentTaskReminders = await prisma.reminder.findMany({
+        where: { 
+          type: 'current_task', 
+          isActive: true,
+          frequency: 'interval'
+        },
+      });
+
+      for (const reminder of currentTaskReminders) {
+        const now = new Date();
+        const lastTriggered = reminder.lastTriggered ? new Date(reminder.lastTriggered) : new Date(0);
+        const intervalMs = ((reminder as any).intervalMinutes || 5) * 60 * 1000;
+        
+        // Check if enough time has passed since last trigger
+        if (now.getTime() - lastTriggered.getTime() >= intervalMs) {
+          await this.checkCurrentTasks();
+          await prisma.reminder.update({
+            where: { id: reminder.id },
+            data: { lastTriggered: new Date() },
+          });
+        }
+      }
+
+      // Check current task reminders with daily frequency
+      const dailyCurrentTaskReminders = await prisma.reminder.findMany({
+        where: { 
+          type: 'current_task', 
+          isActive: true,
+          frequency: 'daily'
+        },
+      });
+
+      for (const reminder of dailyCurrentTaskReminders) {
+        if (reminder.scheduledTime) {
+          const now = new Date();
+          const [hours, minutes] = reminder.scheduledTime.split(':').map(Number);
+          const scheduledTime = new Date();
+          scheduledTime.setHours(hours, minutes, 0, 0);
+
+          // Check if it's time to send the reminder (within 1 minute window)
+          const timeDiff = Math.abs(now.getTime() - scheduledTime.getTime());
+          const lastTriggered = reminder.lastTriggered ? new Date(reminder.lastTriggered) : new Date(0);
+          
+          if (timeDiff < 60000 && now.getTime() - lastTriggered.getTime() > 23 * 60 * 60 * 1000) {
+            await this.checkCurrentTasks();
             await prisma.reminder.update({
               where: { id: reminder.id },
               data: { lastTriggered: new Date() },

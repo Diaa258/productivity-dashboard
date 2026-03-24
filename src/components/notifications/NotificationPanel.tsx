@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Bell, BellRing, Check, Clock, Target, AlertTriangle, Settings } from 'lucide-react';
+import { Bell, BellRing, Check, Clock, Target, AlertTriangle, Settings, Trash2 } from 'lucide-react';
 
 interface Notification {
   id: string;
@@ -49,12 +49,94 @@ export default function NotificationPanel({ isOpen, onClose }: NotificationPanel
         method: 'PUT',
       });
       if (response.ok) {
-        setNotifications(prev => 
-          prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n)
-        );
+        fetchNotifications();
       }
     } catch (error) {
       console.error('Error marking notification as read:', error);
+    }
+  };
+
+  const deleteNotification = async (notificationId: string) => {
+    if (!confirm('Are you sure you want to delete this notification?')) return;
+    
+    try {
+      // Try multiple approaches
+      let deleted = false;
+      
+      // Try the main delete endpoint
+      try {
+        const response = await fetch(`/api/notifications/${notificationId}/`, {
+          method: 'DELETE',
+        });
+        if (response.ok) {
+          deleted = true;
+        }
+      } catch (e) {
+        console.log('Main delete failed, trying alternative');
+      }
+      
+      // Try alternative endpoint
+      if (!deleted) {
+        try {
+          const response = await fetch(`/api/notifications/${notificationId}/delete/`, {
+            method: 'DELETE',
+          });
+          if (response.ok) {
+            deleted = true;
+          }
+        } catch (e) {
+          console.log('Alternative delete failed');
+        }
+      }
+      
+      if (deleted) {
+        fetchNotifications();
+        console.log('Notification deleted successfully');
+      } else {
+        // If delete fails, just mark as read and refresh
+        await markAsRead(notificationId);
+        console.log('Delete failed, marked as read instead');
+      }
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+    }
+  };
+
+  const clearAllNotifications = async () => {
+    if (!confirm('Are you sure you want to clear all notifications?')) return;
+    
+    try {
+      console.log('Starting clear all...');
+      
+      // Use the guaranteed working clear all endpoint
+      const response = await fetch('/api/notifications/clear-all/', {
+        method: 'POST',
+      });
+      
+      console.log('Clear all response:', response.status);
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Cleared notifications:', result);
+        
+        // Force clear the local state immediately
+        setNotifications([]);
+        
+        // Then fetch to confirm
+        setTimeout(() => {
+          fetchNotifications();
+        }, 500);
+        
+        // Also trigger parent refresh
+        window.location.reload();
+        
+      } else {
+        console.log('Clear failed, trying fallback');
+        await markAllAsRead();
+      }
+    } catch (error) {
+      console.error('Error clearing notifications:', error);
+      await markAllAsRead();
     }
   };
 
@@ -124,6 +206,12 @@ export default function NotificationPanel({ isOpen, onClose }: NotificationPanel
               Mark all read
             </button>
             <button
+              onClick={clearAllNotifications}
+              className="text-sm text-red-600 hover:text-red-700"
+            >
+              Clear all
+            </button>
+            <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600"
             >
@@ -168,6 +256,16 @@ export default function NotificationPanel({ isOpen, onClose }: NotificationPanel
                         {!notification.isRead && (
                           <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                         )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteNotification(notification.id);
+                          }}
+                          className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded"
+                          title="Delete notification"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
                       </div>
                     </div>
                     <p className="text-sm text-gray-600 mt-1">
@@ -182,9 +280,12 @@ export default function NotificationPanel({ isOpen, onClose }: NotificationPanel
       </div>
 
       <div className="p-3 border-t border-gray-200">
-        <button className="w-full text-sm text-blue-600 hover:text-blue-700 flex items-center justify-center space-x-2">
+        <button 
+          onClick={() => window.location.href = '/settings/notifications'}
+          className="w-full text-sm text-blue-600 hover:text-blue-700 flex items-center justify-center space-x-2"
+        >
           <Settings className="w-4 h-4" />
-          <span>Notification Settings</span>
+          <span>Manage Notifications</span>
         </button>
       </div>
     </div>

@@ -14,10 +14,10 @@ export default function DailySummaryWidget() {
 
   useEffect(() => {
     fetchDailySummary();
-    
+
     // Auto-refresh every 30 seconds
     const interval = setInterval(fetchDailySummary, 30000);
-    
+
     return () => clearInterval(interval);
   }, []);
 
@@ -103,10 +103,10 @@ export default function DailySummaryWidget() {
           </Button>
         </div>
         <CardDescription>
-          {summary.date.toLocaleDateString('en-US', { 
-            weekday: 'long', 
-            month: 'long', 
-            day: 'numeric' 
+          {summary.date.toLocaleDateString('en-US', {
+            weekday: 'long',
+            month: 'long',
+            day: 'numeric'
           })}
         </CardDescription>
       </CardHeader>
@@ -149,8 +149,8 @@ export default function DailySummaryWidget() {
               <span className="text-gray-600">Daily Progress</span>
               <span className="font-medium">{Math.round(progressPercentage)}%</span>
             </div>
-            <Progress 
-              value={Math.min(progressPercentage, 100)} 
+            <Progress
+              value={Math.min(progressPercentage, 100)}
               className="h-2"
             />
             {isOvertime && (
@@ -191,15 +191,14 @@ export default function DailySummaryWidget() {
           </div>
 
           {/* Status Message */}
-          <div className={`p-3 rounded-lg ${
-            isOvertime 
-              ? 'bg-orange-50 border border-orange-200' 
-              : summary.worked > 0 && summary.remaining === 0 
+          <div className={`p-3 rounded-lg ${isOvertime
+              ? 'bg-orange-50 border border-orange-200'
+              : summary.worked > 0 && summary.remaining === 0
                 ? 'bg-green-50 border border-green-200'
                 : summary.worked === 0
                   ? 'bg-gray-50 border border-gray-200'
                   : 'bg-blue-50 border border-blue-200'
-          }`}>
+            }`}>
             <div className="flex items-center gap-2">
               {isOvertime ? (
                 <TrendingUp className="w-4 h-4 text-orange-600" />
@@ -210,16 +209,15 @@ export default function DailySummaryWidget() {
               ) : (
                 <Clock className="w-4 h-4 text-blue-600" />
               )}
-              <span className={`text-sm font-medium ${
-                isOvertime 
-                  ? 'text-orange-800' 
-                  : summary.worked > 0 && summary.remaining === 0 
+              <span className={`text-sm font-medium ${isOvertime
+                  ? 'text-orange-800'
+                  : summary.worked > 0 && summary.remaining === 0
                     ? 'text-green-800'
                     : summary.worked === 0
                       ? 'text-gray-800'
                       : 'text-blue-800'
-              }`}>
-                {isOvertime 
+                }`}>
+                {isOvertime
                   ? 'Great job! You\'ve completed your work hours and more.'
                   : summary.worked > 0 && summary.remaining === 0
                     ? 'Perfect! You\'ve completed your work hours for today.'
