@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Productivity Dashboard
+Comment=Open Productivity Dashboard
+Exec=cmd /c "cd /d C:\Users\diaaeldin.sayed\CascadeProjects\productivity-dashboard && set PORT=3001 && npm run dev-webpack"
+Icon=C:\Users\diaaeldin.sayed\CascadeProjects\productivity-dashboard\public\favicon.ico
+Terminal=false
+Type=Application
+Categories=Development;

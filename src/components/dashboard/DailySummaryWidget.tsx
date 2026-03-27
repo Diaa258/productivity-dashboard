@@ -87,22 +87,22 @@ export default function DailySummaryWidget() {
   return (
     <Card className="col-span-full lg:col-span-1">
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="w-5 h-5" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+            <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
             Today's Summary
           </CardTitle>
           <Button
             variant="outline"
             size="sm"
             onClick={fetchDailySummary}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 h-8 px-2 sm:px-3 text-xs sm:text-sm"
           >
-            <RefreshCw className="w-4 h-4" />
-            Refresh
+            <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Refresh</span>
           </Button>
         </div>
-        <CardDescription>
+        <CardDescription className="text-xs sm:text-sm">
           {summary.date.toLocaleDateString('en-US', {
             weekday: 'long',
             month: 'long',
@@ -113,21 +113,21 @@ export default function DailySummaryWidget() {
       <CardContent>
         <div className="space-y-6">
           {/* Main Stats */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
             <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">
+              <div className="text-xl sm:text-2xl font-bold text-blue-600">
                 {formatDuration(summary.worked)}
               </div>
-              <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
+              <div className="text-xs sm:text-sm text-gray-600 flex items-center justify-center gap-1">
                 <Clock className="w-3 h-3" />
                 Worked
               </div>
             </div>
             <div className="text-center">
-              <div className={`text-2xl font-bold ${isOvertime ? 'text-orange-600' : 'text-green-600'}`}>
+              <div className={`text-xl sm:text-2xl font-bold ${isOvertime ? 'text-orange-600' : 'text-green-600'}`}>
                 {isOvertime ? `+${formatDuration(summary.overtime)}` : formatDuration(summary.remaining)}
               </div>
-              <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
+              <div className="text-xs sm:text-sm text-gray-600 flex items-center justify-center gap-1">
                 {isOvertime ? (
                   <>
                     <TrendingUp className="w-3 h-3" />

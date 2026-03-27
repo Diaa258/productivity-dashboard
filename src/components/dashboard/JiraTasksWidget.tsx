@@ -459,18 +459,18 @@ export default function JiraTasksWidget() {
   return (
     <Card className="col-span-full lg:col-span-1">
       <CardHeader>
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <CardTitle className="flex items-center gap-2 text-blue-600">
-              <Users className="w-5 h-5" />
+            <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+              <Users className="w-5 h-5 sm:w-6 sm:h-6" />
               Jira Tasks
             </CardTitle>
-            <CardDescription className="text-green-600">
-              Your assigned Jira tickets
+            <CardDescription className="text-xs sm:text-sm">
+              Track your Jira tickets and tasks
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-700">Project:</label>
+            <label className="text-xs sm:text-sm font-medium text-gray-700">Project:</label>
             <select 
               value={selectedProject} 
               onChange={(e) => {
@@ -483,7 +483,7 @@ export default function JiraTasksWidget() {
                 setAllIntegrationTestCases([]);
                 setLatestTask(null);
               }}
-              className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-2 py-1 border border-gray-300 rounded-md text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="TNOQRL">TNOQRL</option>
               <option value="TNOQPAY">TNOQPAY</option>
@@ -493,9 +493,9 @@ export default function JiraTasksWidget() {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          <div className="flex border-b">
+          <div className="flex flex-col sm:flex-row gap-2 overflow-x-auto">
             <button
-              className={`px-4 py-2 font-medium ${
+              className={`px-3 py-2 font-medium text-sm whitespace-nowrap ${
                 activeTab === 'tasks'
                   ? 'border-b-2 border-blue-600 text-blue-600'
                   : 'text-gray-600 hover:text-gray-800'
@@ -505,7 +505,7 @@ export default function JiraTasksWidget() {
               Tasks ({filteredTickets.length})
             </button>
             <button
-              className={`px-4 py-2 font-medium ${
+              className={`px-3 py-2 font-medium text-sm whitespace-nowrap ${
                 activeTab === 'automation'
                   ? 'border-b-2 border-blue-600 text-blue-600'
                   : 'text-gray-600 hover:text-gray-800'
@@ -515,7 +515,7 @@ export default function JiraTasksWidget() {
               Backlog ({filteredAutomationTestCases.length})
             </button>
             <button
-              className={`px-4 py-2 font-medium ${
+              className={`px-3 py-2 font-medium text-sm whitespace-nowrap ${
                 activeTab === 'defects'
                   ? 'border-b-2 border-blue-600 text-blue-600'
                   : 'text-gray-600 hover:text-gray-800'
@@ -525,7 +525,7 @@ export default function JiraTasksWidget() {
               Defects ({filteredDefects.length})
             </button>
             <button
-              className={`px-4 py-2 font-medium ${
+              className={`px-3 py-2 font-medium text-sm whitespace-nowrap ${
                 activeTab === 'integration'
                   ? 'border-b-2 border-blue-600 text-blue-600'
                   : 'text-gray-600 hover:text-gray-800'
@@ -535,7 +535,7 @@ export default function JiraTasksWidget() {
               Completed ({filteredIntegrationTestCases.length})
             </button>
             <button
-              className={`px-4 py-2 font-medium ${
+              className={`px-3 py-2 font-medium text-sm whitespace-nowrap ${
                 activeTab === 'allintegration'
                   ? 'border-b-2 border-blue-600 text-blue-600'
                   : 'text-gray-600 hover:text-gray-800'
@@ -547,14 +547,14 @@ export default function JiraTasksWidget() {
           </div>
 
           {activeTab !== 'latest' && (
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
                 <Input
                   placeholder="Search tickets..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 text-sm"
                 />
               </div>
               <Button
@@ -562,6 +562,7 @@ export default function JiraTasksWidget() {
                 size="icon"
                 onClick={handleRefresh}
                 disabled={loading || loadingAutomationTestCases || loadingAll || loadingIntegration || loadingDefects || loadingAllIntegration}
+                className="h-10 w-10"
               >
                 <RefreshCw className={`w-4 h-4 ${(loading || loadingAutomationTestCases || loadingAll || loadingIntegration || loadingDefects || loadingAllIntegration) ? 'animate-spin' : ''}`} />
               </Button>
@@ -576,6 +577,7 @@ export default function JiraTasksWidget() {
                   variant={filter === status.toLowerCase() ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setFilter(status.toLowerCase())}
+                  className="text-xs h-8 px-2 sm:px-3"
                 >
                   {status}
                 </Button>
@@ -583,46 +585,46 @@ export default function JiraTasksWidget() {
             </div>
           )}
 
-          <div className="border rounded-lg">
+          <div className="border rounded-lg overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[100px]">ID</TableHead>
-                  <TableHead>Title</TableHead>
-                  <TableHead className="w-[100px]">Status</TableHead>
-                  <TableHead className="w-[80px]">Priority</TableHead>
-                  <TableHead className="w-[100px]">Type</TableHead>
+                  <TableHead className="w-[80px] sm:w-[100px] text-xs sm:text-sm">ID</TableHead>
+                  <TableHead className="text-xs sm:text-sm">Title</TableHead>
+                  <TableHead className="w-[80px] sm:w-[100px] text-xs sm:text-sm">Status</TableHead>
+                  <TableHead className="w-[60px] sm:w-[80px] text-xs sm:text-sm">Priority</TableHead>
+                  <TableHead className="w-[80px] sm:w-[100px] text-xs sm:text-sm">Type</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {currentItems.map((ticket) => (
                   <TableRow key={ticket.id}>
-                    <TableCell className="font-medium">
+                    <TableCell className="font-medium text-xs sm:text-sm">
                       <a
                         href={`${credentials?.baseUrl || ''}/browse/${ticket.id}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-1"
+                        className="text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-1 text-xs sm:text-sm"
                       >
                         {ticket.id}
                         <ExternalLink className="w-3 h-3" />
                       </a>
                     </TableCell>
-                    <TableCell className="max-w-xs truncate" title={ticket.summary}>
+                    <TableCell className="max-w-[150px] sm:max-w-xs truncate text-xs sm:text-sm" title={ticket.summary}>
                       {ticket.summary}
                     </TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(ticket.status)}`}>
+                    <TableCell className="text-xs sm:text-sm">
+                      <span className={`px-1 sm:px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(ticket.status)}`}>
                         {ticket.status}
                       </span>
                     </TableCell>
-                    <TableCell>
-                      <span className={`text-sm font-medium ${getPriorityColor(ticket.priority)}`}>
+                    <TableCell className="text-xs sm:text-sm">
+                      <span className={`text-xs sm:text-sm font-medium ${getPriorityColor(ticket.priority)}`}>
                         {ticket.priority || '-'}
                       </span>
                     </TableCell>
-                    <TableCell>
-                      <span className="text-xs text-slate-600 bg-slate-100 px-2 py-1 rounded">
+                    <TableCell className="text-xs sm:text-sm">
+                      <span className="text-xs text-slate-600 bg-slate-100 px-1 sm:px-2 py-1 rounded">
                         {ticket.issuetype || '-'}
                       </span>
                     </TableCell>
@@ -644,8 +646,8 @@ export default function JiraTasksWidget() {
           )}
 
           {totalPages > 1 && (
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-slate-600">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="text-xs sm:text-sm text-slate-600">
                 Showing {startIndex + 1} to {Math.min(endIndex, currentData.length)} of {currentData.length} {activeTab}
               </div>
               <div className="flex items-center gap-2">
@@ -654,21 +656,23 @@ export default function JiraTasksWidget() {
                   size="sm"
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
+                  className="h-8 px-2 sm:px-3 text-xs sm:text-sm"
                 >
-                  <ChevronLeft className="w-4 h-4" />
-                  Previous
+                  <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Previous</span>
                 </Button>
-                <span className="text-sm font-medium">
-                  Page {currentPage} of {totalPages}
+                <span className="text-xs sm:text-sm font-medium px-2">
+                  {currentPage} / {totalPages}
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
+                  className="h-8 px-2 sm:px-3 text-xs sm:text-sm"
                 >
-                  Next
-                  <ChevronRight className="w-4 h-4" />
+                  <span className="hidden sm:inline">Next</span>
+                  <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
                 </Button>
               </div>
             </div>
